@@ -1,0 +1,375 @@
+{
+  "name": "erro de separação",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7448952a-ccc1-4882-a3f8-fe3aec650a8d",
+              "name": "submittedAt",
+              "value": "={{ DateTime.fromISO($json[\"submittedAt\"]).toFormat(\"dd/MM/yyyy HH:mm:ss\") }}",
+              "type": "string"
+            },
+            {
+              "id": "8f2fbd2f-f326-4a6c-a925-cbd1cf0676bf",
+              "name": "ID ",
+              "value": "={{ $now.toMillis() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f5bd35f8-805a-48d2-9dd0-83d4875bffb0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1M0EQQE4QS9M8yW5l-Qk468XbAq41Rv9q-in23Q1tkAk",
+          "mode": "list",
+          "cachedResultName": "Erro de separação",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M0EQQE4QS9M8yW5l-Qk468XbAq41Rv9q-in23Q1tkAk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M0EQQE4QS9M8yW5l-Qk468XbAq41Rv9q-in23Q1tkAk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ajudante": "={{ $json['Ajudante:'] }}",
+            "Tipo de Erro": "={{ $json['Tipo de erro:'] }}",
+            "Data": "={{ $json.submittedAt }}",
+            "ID": "={{ $json['ID '] }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "Ajudante",
+              "displayName": "Ajudante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tipo de Erro",
+              "displayName": "Tipo de Erro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7de4f527-f768-4f91-846d-2b247dd93ca2",
+      "name": "Append or update row in sheet",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LQNTJf1YospsK1Dl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "brtal675985@ambev.com.br, BRTAL0048@ambev.com.br, 99788600@ambev.com.br, 99815903@ambev.com.br",
+        "subject": "=Plan erro de separação ",
+        "emailType": "text",
+        "message": "Segue a planilha de erro de separação atualizada",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          },
+          "ccList": ""
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        -224
+      ],
+      "id": "c941b25a-8266-4539-ae02-ea7a3f586de6",
+      "name": "Send a message1",
+      "webhookId": "04f0b04c-43ef-4d79-ad9b-0b6b4ab014e0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hcaGyMO9TKpcpSkF",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": " https://docs.google.com/spreadsheets/d/1M0EQQE4QS9M8yW5l-Qk468XbAq41Rv9q-in23Q1tkAk/export?format=xlsx&id=1M0EQQE4QS9M8yW5l-Qk468XbAq41Rv9q-in23Q1tkAk",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        -224
+      ],
+      "id": "a37b884c-8542-43a4-ada8-4aeb74fb34ab",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "formTitle": "Erro de Separação",
+        "formDescription": "Forms para consolidar os erros de separação",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Ajudante:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Jackson Rosa"
+                  },
+                  {
+                    "option": "Leandro Paiva"
+                  },
+                  {
+                    "option": "Eduardo Oliveira"
+                  },
+                  {
+                    "option": "Matheus Costa"
+                  },
+                  {
+                    "option": "Gabriel Coelho"
+                  },
+                  {
+                    "option": "Gabriel Andre"
+                  },
+                  {
+                    "option": "Victor Souza"
+                  },
+                  {
+                    "option": "Jurandir Riberio"
+                  },
+                  {
+                    "option": "Anderson Francisco"
+                  },
+                  {
+                    "option": "Leonardo "
+                  },
+                  {
+                    "option": "Evandro Santos"
+                  },
+                  {
+                    "option": "Antonio Vasconcelos"
+                  },
+                  {
+                    "option": "Davi Edson"
+                  },
+                  {
+                    "option": "Estevão"
+                  },
+                  {
+                    "option": "Carlos"
+                  },
+                  {
+                    "option": "Marcos"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tipo de erro:",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Inversão"
+                  },
+                  {
+                    "option": "Falta"
+                  },
+                  {
+                    "option": "Sobra"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "customCss": ":root {\n    /* Fontes */\n    --font-family: 'Montserrat', sans-serif;\n    --font-weight-normal: 400;\n    --font-weight-bold: 700;\n\n    /* Tamanhos de Fonte */\n    --font-size-body: 14px;\n    --font-size-label: 16px;\n    --font-size-input: 16px;\n    --font-size-header: 20px;\n    --font-size-paragraph: 14px;\n    --font-size-link: 12px;\n    --font-size-error: 12px;\n    --font-size-subheader: 14px;\n\n    /* Cores */\n    --color-background: #0B0B0B;\n    --color-card-bg: #151515;\n    --color-card-border: #222;\n    --color-header: #FFE600;\n    --color-label: #FFFFFF;\n    --color-input-border: #FFE600;\n    --color-input-text: #FFFFFF;\n    --color-focus-border: #FFD000;\n    --color-submit-btn-bg: #FFE600;\n    --color-submit-btn-text: #0B0B0B;\n    --color-error: #ea1f30;\n    --color-required: #FFE600;\n    --color-html-text: #FFFFFF;\n    --color-html-link: #FFE600;\n    --color-header-subtext: #CCCCCC;\n\n    /* Bordas */\n    --border-radius-card: 15px;\n    --border-radius-input: 10px;\n\n    /* Espaçamento */\n    --padding-container-top: 20px;\n    --padding-card: 20px;\n    --padding-form-input: 15px;\n\n    /* Outros */\n    --container-width: 700px;\n    --submit-btn-height: 50px;\n    --box-shadow-card: none;\n}\n\n/* Ajustes adicionais para garantir a fidelidade ao layout */\nbody {\n    background: var(--color-background);\n    color: var(--color-html-text);\n    font-family: var(--font-family);\n}\n\n.n8n-form-container {\n    padding-top: var(--padding-container-top);\n    max-width: var(--container-width);\n    margin: auto;\n}\n\n.n8n-form-card {\n    background: var(--color-card-bg);\n    border: 1px solid var(--color-card-border);\n    border-radius: var(--border-radius-card);\n    box-shadow: var(--box-shadow-card);\n    padding: var(--padding-card);\n}\n\n.n8n-form-header h1 {\n    color: var(--color-header);\n    font-family: 'Playfair Display', serif; /* Fonte específica do título do seu site */\n    font-weight: 700;\n    text-align: center;\n}\n\n.n8n-form-input {\n    background: #1A1A1A; /* Cor específica do input do seu site */\n    border: 2px solid var(--color-input-border);\n    border-radius: var(--border-radius-input);\n    color: var(--color-input-text);\n    padding: var(--padding-form-input);\n}\n\n.n8n-form-input:focus {\n    outline: none;\n    border-color: var(--color-focus-border);\n}\n\n.n8n-form-submit-button {\n    background: var(--color-submit-btn-bg);\n    color: var(--color-submit-btn-text);\n    font-weight: var(--font-weight-bold);\n    border-radius: var(--border-radius-input);\n    height: var(--submit-btn-height);\n    font-size: 18px;\n    cursor: pointer;\n}\n\n.n8n-form-submit-button:hover {\n    background: var(--color-focus-border);\n}\n\n/* Estilo para botões de múltipla escolha, se aplicável */\n.n8n-form-options-container .n8n-form-option {\n    background: #2A2A2A;\n    color: white;\n    padding: 12px;\n    border-radius: 8px;\n    border: 1px solid #444;\n    cursor: pointer;\n}\n\n.n8n-form-options-container .n8n-form-option.selected {\n    background: var(--color-submit-btn-bg);\n    color: var(--color-submit-btn-text);\n    border-color: var(--color-submit-btn-bg);\n}"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a4740410-048f-46e5-aa57-75397d3dceac",
+      "name": "On form submission",
+      "webhookId": "b0c5bcef-4e20-45cf-8288-f5991703e99e",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "00 09 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        -224
+      ],
+      "id": "7004ee63-a3c4-4ec7-a313-31e8f0a94db2",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Sao_Paulo",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "2f4524eb-e793-46e8-8940-60167d2ef494",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cdb3584414c12f9a520107c02d4d531eb7b8873912392ef1be293c44cab3e07f"
+  },
+  "nodeGroups": [],
+  "id": "wiv9hKgKoCAKAxcJ",
+  "tags": [
+    {
+      "updatedAt": "2026-08-23T21:50:36.060Z",
+      "createdAt": "2026-08-23T21:50:36.060Z",
+      "id": "XBQArEuCMVUxenPd",
+      "name": "tag1"
+    }
+  ]
+}

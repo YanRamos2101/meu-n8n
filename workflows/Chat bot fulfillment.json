@@ -1,0 +1,617 @@
+{
+  "name": "Chat bot fulfillment",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "authentication": "basicAuth",
+        "initialMessages": "Olá, Sou o Beestola!\nDigite sua matrícula para começar.",
+        "options": {
+          "loadPreviousSession": "notSupported",
+          "subtitle": "Assistente do Fulfillment RJ",
+          "title": "Beestola",
+          "customCss": "/* ==========================================================================\n   N8N Custom Chat Styling - CORREÇÃO DEFINITIVA DA BORDA\n   ========================================================================== */\n\n/* Importa a fonte do Google Fonts */\n@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Playfair+Display:wght@700&display=swap');\n\n/* =========================\n   VARIÁVEIS GLOBAIS\n   ========================= */\n:root {\n    /* Família da Fonte */\n    --chat--font-family: 'Montserrat', sans-serif;\n\n    /* Cores Principais */\n    --chat--color--primary: #FFE600;\n    --chat--color--secondary: #2A2A2A;\n    --chat--color-dark: #0B0B0B;\n    --chat--color-white: #ffffff;\n    --chat--color-light: #151515;\n\n    /* Fundo Geral e Rodapé */\n    --chat--body--background: #0B0B0B;\n    --chat--footer--background: #0B0B0B;\n\n    /* Cabeçalho */\n    --chat--header--background: #0B0B0B;\n    --chat--header--color: #FFE600;\n    --chat--heading--font-size: 20px;\n\n    /* Mensagens */\n    --chat--message--bot--background: #FFE600;\n    --chat--message--bot--color: #000000;\n    --chat--message--user--background: #2A2A2A;\n    --chat--message--user--color: #ffffff;\n\n    /* Área de Input */\n    --chat--input--background: #1A1A1A;\n    --chat--input--text-color: #ffffff;\n    --chat--input--border: 2px solid #FFE600;\n    --chat--input--border-active: 2px solid #FFD000;\n    --chat--input--border-radius: 10px;\n\n    /* Botão de Envio */\n    --chat--input--send--button--background: #FFE600;\n    --chat--input--send--button--color: #000000;\n    --chat--input--send--button--background-hover: #FFD000;\n    \n    /* Raio da Borda Geral */\n    --chat--border-radius: 10px;\n}\n\n/* =========================\n   ESTILOS ESPECÍFICOS (Overrides)\n   ========================= */\n\n/* FORÇA o fundo do rodapé a ser escuro e REMOVE A BORDA SUPERIOR */\n.chat-footer {\n    background-color: #0B0B0B !important;\n    border-top: none !important; /* <<< CORREÇÃO PRINCIPAL APLICADA AQUI */\n    padding: 15px !important;\n}\n\n/* Garante que o container INTERNO do input seja transparente e sem bordas */\n.chat-input-container {\n    background-color: transparent !important;\n    border: none !important;\n    padding: 0 !important;\n}\n\n/* Ajusta a área de texto para ter o fundo e bordas corretos */\n.chat-textarea {\n    background-color: #1A1A1A !important;\n    border: 2px solid #FFE600 !important;\n    border-radius: 10px !important;\n    color: #ffffff !important;\n}\n\n/* Bolha de Mensagem do Bot com borda customizada */\n.chat-message.bot {\n    background: var(--chat--message--bot--background);\n    color: var(--chat--message--bot--color);\n    border-radius: 15px 15px 15px 5px;\n    font-weight: 700;\n    max-width: 80%;\n}\n\n/* Bolha de Mensagem do Usuário com borda customizada */\n.chat-message.user {\n    background: var(--chat--message--user--background);\n    color: var(--chat--message--user--color);\n    border-radius: 15px 15px 5px 15px;\n    margin-left: auto;\n    max-width: 80%;\n}\n\n/* Estilização da Barra de Rolagem */\n.messages-list::-webkit-scrollbar {\n    width: 6px;\n}\n\n.messages-list::-webkit-scrollbar-thumb {\n    background: #FFE600;\n    border-radius: 10px;\n}",
+          "responseMode": "lastNode"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a9a19c25-870a-4589-baea-7bc2b5193e3e",
+      "name": "Chat",
+      "webhookId": "5add6eda-58ac-4e1d-82e0-e22fd88cf0bb",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "1ZvyuyiLW2iUBlxS",
+          "name": "Unnamed credential 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nó — Identificar\n// Code · Mode: Run Once for Each Item · Language: JavaScript\n\nconst {\n  sessionId = null,\n  action = 'sendMessage',\n  chatInput = ''\n} = $json;\n\nconst texto = String(chatInput).trim();\n\n// --- 1. Abertura do chat: pedido de histórico, não é mensagem do usuário\nif (action === 'loadPreviousSession') {\n  return {\n    json: {\n      sessionId, action, chatInput: texto,\n      matricula: null, origemMatricula: 'nenhuma',\n      soMatricula: false, motivo: 'carregar-historico'\n    }\n  };\n}\n\n// --- 2. Mascara o que NÃO é matrícula, antes de qualquer extração\nlet mascarado = texto\n  // datas: 29/10/2026, 29-10-2026, 29.10.2026, 29/10\n  .replace(/\\b\\d{1,2}[\\/.\\-]\\d{1,2}([\\/.\\-]\\d{2,4})?\\b/g, ' ')\n  // horários: 12h, 14h30, 17:00\n  .replace(/\\b\\d{1,2}\\s*[:h]\\s*\\d{0,2}\\b/gi, ' ')\n  // sequências de números curtos soltos: \"12 14 17\", \"6 8 10\"\n  .replace(/\\b\\d{1,2}(?:\\s+\\d{1,2}){2,}\\b/g, ' ');\n\n// --- 3. Candidatos: 5 a 8 dígitos, com separador interno opcional\nconst candidatos = [...mascarado.matchAll(/\\b(\\d{5,8}|\\d{2,3}[.\\-\\/]\\d{3,5})\\b/g)]\n  .map(m => String(m[1]).replace(/\\D/g, ''))\n  .filter(d => d.length >= 5 && d.length <= 8);\n\n// --- 4. Aceita como matrícula só em dois casos: mensagem inteira, ou palavra-chave\nconst sobraTexto = texto.replace(/[\\d.\\-\\/\\s]/g, '');\nconst mensagemSoNumero = candidatos.length === 1 && sobraTexto.length === 0;\nconst temPalavraChave = /matr[ií]cula|mat\\b|crach[aá]|registro|qlp/i.test(texto);\n\nlet matricula = null;\nlet origemMatricula = 'nenhuma';\n\nif (candidatos.length === 1 && (mensagemSoNumero || temPalavraChave)) {\n  matricula = candidatos[0];\n  origemMatricula = 'mensagem';\n}\n\nconst soMatricula = Boolean(matricula) && mensagemSoNumero;\n\nconst motivo = soMatricula ? 'primeira-identificacao'\n             : matricula   ? 'matricula-na-pergunta'\n             :               'sem-matricula';\n\nreturn {\n  json: {\n    sessionId, action, chatInput: texto,\n    matricula, origemMatricula, soMatricula, motivo,\n    candidatos, mensagemSoNumero, temPalavraChave\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "c711a5ba-9024-4592-b8f7-a49ef1a3cc9f",
+      "name": "Identificar"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COALESCE(s.matricula, '') AS matricula_sessao,\n  COALESCE(s.nome, '')      AS nome_sessao,\n  COALESCE(s.turno, '')     AS turno_sessao,\n  COALESCE(s.funcao, '')    AS funcao_sessao,\n  COALESCE((s.atualizado_em > now() - interval '8 hours'), false) AS sessao_ativa\nFROM (SELECT 1) AS base\nLEFT JOIN public.bot_sessoes s\n  ON s.session_id = $1;",
+        "options": {
+          "queryReplacement": "=$1 = {{ $('Identificar').first().json.sessionId }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        464,
+        0
+      ],
+      "id": "22b7ab37-8de5-4ab8-a56f-6ae4a531b6e3",
+      "name": "Buscar sessão",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "TdnC9w5mJwBm71Ce",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Nó — consolidar\n// Code · Mode: Run Once for Each Item · Language: JavaScript\n\nconst ident = $('Identificar').first()?.json ?? {};\nconst sess  = $('Buscar sessão').first()?.json ?? {};\n\n// ---- normalização: booleano pode chegar como true, \"true\", \"t\" ou 1 ----\nconst paraBool = (v) =>\n  v === true || v === 'true' || v === 't' || v === 1 || v === '1';\n\nconst ativa       = paraBool(sess.sessao_ativa);\nconst soMatricula = paraBool(ident.soMatricula);\nconst motivo      = String(ident.motivo || '').trim();\n\n// ---- campos da mensagem ----\nconst sessionId       = String(ident.sessionId || '').trim();\nconst chatInput       = String(ident.chatInput || '').trim();\nconst matricula       = String(ident.matricula || '').trim();\nconst origemMatricula = String(ident.origemMatricula || '').trim();\n\n// ---- decisão da rota ----\nlet rota;\n\nif (motivo === 'carregar-historico') {\n  rota = 'historico';\n} else if (ativa && !soMatricula) {\n  rota = 'sessao-ativa';\n} else if (ativa && soMatricula) {\n  rota = 'troca-ajudante';\n} else if (matricula) {\n  rota = 'validar-matricula';\n} else {\n  rota = 'sem-matricula';\n}\n\nreturn {\n  json: {\n    rota,\n    sessionId,\n    action: ident.action || '',\n    chatInput,\n    matricula,\n    origemMatricula,\n    soMatricula,\n    motivo,\n    sessao_ativa: ativa,\n    matricula_sessao: String(sess.matricula_sessao ?? sess.matricula ?? '').trim(),\n    nome_sessao:      String(sess.nome_sessao      ?? sess.nome      ?? '').trim(),\n    turno_sessao:     String(sess.turno_sessao     ?? sess.turno     ?? '').trim(),\n    funcao_sessao:    String(sess.funcao_sessao    ?? sess.funcao    ?? '').trim(),\n    debug: {\n      identificou:      Boolean(sessionId || chatInput),\n      achouSessao:      Boolean(sess.matricula_sessao ?? sess.matricula),\n      soMatriculaTipo:  typeof ident.soMatricula,\n      ativaTipo:        typeof sess.sessao_ativa,\n      rota\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "8cfca544-1149-4b84-a25d-742d62599373",
+      "name": "consolidar"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.motivo }}",
+                    "rightValue": "historico",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "aeb834f4-791c-4729-8945-cdcf41c42e77"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Histórico"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e781eac5-40aa-4c45-8b64-84d98c95a300",
+                    "leftValue": "={{$json.rota}}",
+                    "rightValue": "sessao-ativa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sessao-ativa"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c055ed6c-7411-410e-9d67-bf1645d405fe",
+                    "leftValue": "={{$json.rota}}",
+                    "rightValue": "troca-ajudante",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "troca-ajudante"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "950c80a6-6efa-4232-9d29-019a8dec90bf",
+                    "leftValue": "={{$json.rota}}",
+                    "rightValue": "validar-matricula",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "validar-matricula"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d7eb4240-fb59-4f1d-add7-3654da24f607",
+                    "leftValue": "={{$json.rota}}",
+                    "rightValue": "sem-matricula",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sem-matricula"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        -48
+      ],
+      "id": "36b2e46e-de80-49b4-92df-21f0970658e7",
+      "name": "roteador"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COALESCE(q.matricula, '') AS matricula_qlp,\n  COALESCE(q.nome, '')      AS nome,\n  COALESCE(q.turno, '')     AS turno,\n  COALESCE(q.funcao, '')    AS funcao,\n  (q.matricula IS NOT NULL) AS encontrado\nFROM (SELECT 1) AS base\nLEFT JOIN public.qlp_ajudantes q\n       ON q.matricula = $1\n      AND q.ativo = true;",
+        "options": {
+          "queryReplacement": "=={{ $json.matricula }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1328,
+        32
+      ],
+      "id": "38249561-b2aa-434a-b69b-e893524b1045",
+      "name": "Validar QLP",
+      "credentials": {
+        "postgres": {
+          "id": "TdnC9w5mJwBm71Ce",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fadca1af-5588-4948-85aa-5f9d43667261",
+              "leftValue": "={{ $json.encontrado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1552,
+        64
+      ],
+      "id": "c8b44ff5-cc81-441c-a69f-19eaccc6ab05",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.bot_sessoes\n  (session_id, matricula, nome, turno, funcao, atualizado_em)\nVALUES\n  ($1, $2, $3, $4, $5, now())\nON CONFLICT (session_id) DO UPDATE SET\n  matricula     = EXCLUDED.matricula,\n  nome          = EXCLUDED.nome,\n  turno         = EXCLUDED.turno,\n  funcao        = EXCLUDED.funcao,\n  atualizado_em = now()\nRETURNING session_id, matricula, nome, turno, funcao, atualizado_em;",
+        "options": {
+          "queryReplacement": "={{ $('Identificar').first().json.sessionId }}\n{{ $('Validar QLP').first().json.matricula_qlp }}\n{{ $('Validar QLP').first().json.nome }}\n{{ $('Validar QLP').first().json.turno }}\n{{ $('Validar QLP').first().json.funcao }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1792,
+        48
+      ],
+      "id": "8b3333d7-3aa0-4b26-ac4f-fe826de755dd",
+      "name": "Gravar sessão",
+      "credentials": {
+        "postgres": {
+          "id": "TdnC9w5mJwBm71Ce",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Nó — Saudar\n// Code · Mode: Run Once for Each Item · Language: JavaScript\n\n// $json = retorno do RETURNING do nó Gravar sessão\nconst row = $json;\n\nconst nomeCompleto = String(row.nome   || '').trim();\nconst funcao       = String(row.funcao || '').trim();\nconst turno        = String(row.turno  || '').trim();\n\n// primeiro nome, em capitalização normal (EVANDRO -> Evandro)\nconst primeiroBruto = nomeCompleto.split(' ')[0] || '';\nconst primeiro = primeiroBruto\n  ? primeiroBruto.charAt(0).toUpperCase() + primeiroBruto.slice(1).toLowerCase()\n  : '';\n\nconst linhas = [primeiro ? `Olá, ${primeiro}!` : 'Olá!'];\n\nconst contexto = [funcao, turno ? `Turno ${turno}` : ''].filter(Boolean).join(' · ');\nif (contexto) linhas.push(contexto);\n\nlinhas.push('Posso ajudar com padrões, resultados do mês e etc. O que você precisa?');\n\n// se a mensagem que identificou a pessoa também trazia uma pergunta,\n// ela não foi respondida — avisa em vez de perder o conteúdo\nconst ident        = $('Identificar').item.json;\nconst chatInput    = String(ident.chatInput || '').trim();\nconst soMatricula  = ident.soMatricula === true;\n\nif (chatInput && !soMatricula) {\n  linhas.push('Sua mensagem chegou junto com a identificação. Pode repetir a pergunta?');\n}\n\nconst texto = linhas.join('\\n\\n');\n\nreturn {\n  json: {\n    output: texto,   // campo lido pelo Chat Trigger\n    text:   texto    // espelho, caso seu nó esteja configurado com \"text\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        48
+      ],
+      "id": "ed40454f-c218-40c8-854e-b2f04ab84dff",
+      "name": "Saudar"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Nó — Preparar contexto\n// Code · Mode: Run Once for Each Item · Language: JavaScript\n\nconst ident = $('Identificar').first().json;\nconst sess  = $('consolidar').first().json;\n\nconst sessionId = String(ident.sessionId || '').trim();\n\n// matrícula: prioriza a da sessão gravada, cai para a da mensagem\nconst matricula = String(\n  sess.matricula_sessao || ident.matricula || ''\n).trim();\n\nconst nome      = String(sess.nome_sessao   || '').trim();\nconst funcao    = String(sess.funcao_sessao || '').trim();\nconst turno     = String(sess.turno_sessao  || '').trim();\nconst chatInput = String(ident.chatInput    || '').trim();\n\n// dia no fuso da operação, formato AAAA-MM-DD\nconst dia = new Intl.DateTimeFormat('sv-SE', {\n  timeZone: 'America/Sao_Paulo'\n}).format(new Date());\n\n// CHAVE DE MEMÓRIA: pessoa + dia\n// se a matrícula vier vazia, cai para o sessionId (nunca \"sessionId:\")\nconst chaveMemoria = matricula ? `${matricula}:${dia}` : sessionId;\n\n// data e hora legíveis, e a hora isolada para o ciclo de cortes\nconst agoraTexto = new Intl.DateTimeFormat('pt-BR', {\n  timeZone: 'America/Sao_Paulo',\n  dateStyle: 'short',\n  timeStyle: 'short'\n}).format(new Date());\n\nconst horaAtual = Number(new Intl.DateTimeFormat('pt-BR', {\n  timeZone: 'America/Sao_Paulo',\n  hour: '2-digit',\n  hour12: false\n}).format(new Date()));\n\nconst quem = [nome, funcao, turno ? `Turno ${turno}` : '']\n  .filter(Boolean)\n  .join(', ');\n\nconst systemPrompt = `Você é o assistente da operação de fulfillment.\n\nVocê está falando com ${quem || 'um colaborador da operação'}.\n\nCONTEXTO DA OPERAÇÃO: CENTRO DE DISTRIBUIÇÃO FULFILLMENT\n\nEsta unidade tem como sonho \"ser referência na disponibilidade de produtos, entregando com qualidade, pontualidade e segurança\", e essa ambição precisa estar traduzida em cada rotina descrita aqui. Somos uma unidade de Fulfillment que abriga produtos de curva C e D e itens de marketplace, e a razão de existir desse modelo é tirar complexidade dos CDDs: esses produtos giram em pouca quantidade, não era rentável reservar espaço de armazém para eles nos centros de distribuição e, na maioria das vezes, acabavam perdendo validade dentro da unidade. Concentrando esse portfólio aqui, o CDD ganha espaço e giro, e nós ganhamos a responsabilidade de tratar esse estoque com o mesmo rigor de qualquer outro, porque ele é o que sustenta a disponibilidade de venda em várias praças.\n\nAtendemos cinco unidades por Fulfillment, com pedido do dia e entrega no dia seguinte, que são Niterói, Pavuna, Jacarepaguá, São Cristóvão e Campo Grande. Atendemos também por HUB, modelo em que mantemos estoque antecipado em CDDs mais distantes, e por SLA, com prazos de entrega maiores, e essas duas modalidades cobrem Campos, Itaperuna, Nova Friburgo, Macacu, Petrópolis e Volta Redonda. A consequência prática dessa divisão é que a operação do dia tem duas velocidades: as cinco unidades de Fulfillment exigem que a separação e a expedição aconteçam no mesmo dia, com horário de fechamento rígido, enquanto as seis praças de HUB e SLA aceitam abastecimento em ciclos programados e com antecedência maior, o que exige planejamento próprio para não consumir capacidade do fluxo diário.\n\nA janela de operação vai de 6h às 22h em dois turnos. O Turno A concentra descarga, recebimento, ressuprimento e parte da separação. O Turno B é dedicado à separação e à vazão das ondas da tarde. As ondas são geradas por três cortes diários, às 12h, às 14h e às 17h, sendo o das 17h o último do dia e, portanto, o que define o que vai ou não sair naquela data. O Line Haul mede a entrega do carro na unidade do CDD antes das 21h, porque a partir daí existe tempo hábil para separação, conferência e carregamento sem impactar o carregamento do próprio CDD. Todas as movimentações da unidade são registradas no WMS, que é a fonte única de verdade sobre posição, quantidade e endereço de cada item.\n\nO fluxo começa no recebimento e na descarga. No início do turno conferimos a programação do dia, com as carretas previstas, o tipo de carro e a janela de chegada, porque sem esse alinhamento a doca vira gargalo no meio da manhã. Na chegada, o documento, com nota fiscal e romaneio, é conferido e a doca é liberada. O ajudante atua na descarga de caminhão baú e no ato de rebater as cargas para conferência, enquanto o operador de empilhadeira é responsável por descarregar os demais tipos de carro no menor tempo possível e com segurança. Depois vem a conferência de recebimento, com contagem de volumes e checagem de item, quantidade, lote e validade contra o documento, e qualquer divergência de falta, sobra, avaria ou item errado é registrada no WMS e comunicada ao supervisor na hora, nunca postergada para o fim do turno, porque divergência acumulada vira acerto manual e acerto manual vira erro de estoque. A incorporação no sistema acontece na sequência, garantindo rastreabilidade desde a entrada, e a doca é liberada para o próximo carro com registro de horário de início e fim do atendimento, que é a base de apuração do TMA.\n\nA armazenagem segue a mesma lógica de disciplina. Produto conferido e incorporado é endereçado conforme curva e giro, com os itens de maior saída em locais de fácil acesso e os de curva C e D em posições secundárias, e toda movimentação é registrada no WMS no ato, com endereço de origem e de destino, sem acúmulo de pendências para depois. A regra de ouro é que nada fica fora de endereço, porque produto parado no chão degrada o ILA imediatamente e bloqueia a venda, e a verificação diária de endereçamento e organização é responsabilidade do operador da retrátil.\n\nO ressuprimento é o elo entre o estoque e a separação. Ele é executado prioritariamente no Turno A, antes da abertura das ondas, com o operador da retrátil fazendo a movimentação e o ajudante apoiando a reposição de prateleira e o abastecimento de picking. Toda reposição precisa ser baixada no WMS imediatamente, porque ressuprimento feito fisicamente e não lançado é a causa mais comum de divergência entre sistema e contagem física. Durante as ondas o ressuprimento é contínuo: quando um picking esvazia, repõe antes que a separação pare, e no Turno B o ajudante do repack apoia nessa tarefa quando estiver ocioso.\n\nA separação das ondas acontece conforme os cortes de 12h, 14h e 17h, e a prioridade de execução não é a ordem de chegada e sim o horário de fechamento de cada unidade. Niterói precisa estar concluída às 18h30, São Cristóvão e Pavuna às 19h, Jacarepaguá às 19h30, e Campo Grande às 18h30. A separação é conferida item a item contra a lista da onda com registro no WMS, e o produto segue para conferência e carregamento respeitando a sequência de fechamento das unidades. O objetivo real de tudo isso é terminar a separação de toda a carga no horário alvo, para que sobre tempo hábil de emissão de nota, carregamento e trânsito até as 21h.\n\nO repack é a barreira de qualidade da unidade. Produtos avariados, com embalagem comprometida ou próximos do vencimento são direcionados para essa área, onde o ajudante avalia e recupera o que for possível por meio de reembalagem, sanitização e reagrupamento, garantindo que o produto tenha condição adequada de venda e envio. Todo item recuperado é reincorporado no WMS com a quantidade real recuperada, e esse registro é o que garante rastreabilidade e alimenta diretamente o IRA. O que for irrecuperável segue para descarte ou sucata conforme o procedimento de qualidade, com registro no sistema. Quando ocioso, o ajudante do repack apoia o ressuprimento e mantém o 5S da sua área.\n\nA expedição fecha o ciclo. A carga separada passa por conferência antes do carregamento, a nota fiscal é emitida dentro da janela sem virar gargalo, e o carregamento é sequenciado por unidade respeitando os horários alvo de fechamento. O operador conferente é o responsável pela conferência e pelo carregamento dos carros, e o carro é liberado com meta de chegada no CDD antes das 21h, que é o que o Line Haul mede.\n\nSobre os papéis, o ajudante do Turno A garante o ressuprimento dos produtos no picking e na prateleira, garante o 5S do armazém e garante a descarga dos caminhões o mais rápido possível e com segurança. O ajudante do repack foca em salvar os produtos e em garantir que estejam em boas condições para envio, porque isso é o que preserva a satisfação do cliente, ajuda no ressuprimento quando estiver ocioso e garante o 5S da sua área de trabalho. O ajudante do Turno B garante a eficiência na separação das ondas para que a entrega aconteça antes das 21h no CDD e garante o 5S do armazém. O operador da retrátil, nos dois turnos, garante que o ressuprimento seja feito corretamente e que a armazenagem dos produtos ocorra fisicamente e dentro do sistema. O operador conferente garante a conferência e o carregamento dos carros. A liderança responde pela gestão à vista, pelo tratamento dos desvios e pelo acompanhamento diário dos indicadores com o time.\n\nO IRA, Inventory Records Accuracy, mede se a quantidade que consta no sistema bate com a quantidade contada fisicamente no dia, e é calculado pela razão entre os itens contados com quantidade correta e o total de itens contados, multiplicada por cem. A meta é 90%, e o caminho até ela é fazer toda movimentação de ressuprimento, separação e incorporação de repack no WMS, porque só assim existe rastreabilidade e confiabilidade no estoque disponibilizado para venda. A apuração é feita por contagem cíclica diária por amostragem, e o responsável é todo mundo que movimenta produto, com execução direta do operador da retrátil e dos ajudantes.\n\nO ILA, Inventory Location Accuracy, mede algo diferente e mais fino: se o item que consta no sistema em um endereço é o mesmo que está fisicamente naquele local. Também é calculado por razão entre locais contados com item correto e total de locais contados, multiplicada por cem, só que aqui a meta é 100%, porque um endereço errado significa que a separação vai falhar e o cliente não recebe. O caminho é fazer toda movimentação de ressuprimento e armazenamento corretamente no WMS e não deixar produto fora de endereço, com contagem cíclica por endereço.\n\nO Line Haul mede se o carro chegou no CDD antes das 21h com tempo hábil para separação, conferência e carregamento, e é calculado pela razão entre os carros entregues antes das 21h e o total de carros do dia, multiplicada por cem, com meta de 90% e apuração diária por carro. As alavancas são a separação eficiente e segura, o operador da retrátil garantindo disponibilidade de produto para separação e o operador conferente garantindo conferência e carregamento, o que mostra que esse indicador é consequência do trabalho de três funções e não de uma.\n\nO TMA, Tempo Médio de Atendimento, mede o tempo médio de atendimento das carretas de produto que recebemos, da chegada à liberação da doca, calculado pela soma dos tempos de atendimento dividida pelo número de carretas atendidas. As metas são 3 horas para marketplace e 2 horas para frota fixa, com apuração diária por carreta. As alavancas são descarga rápida e segura, o ajudante na descarga de baú e no rebatimento da carga e o operador descarregando os demais tipos de carro no menor tempo possível, sempre com o cuidado de que nenhuma meta de tempo justifica atalho em segurança.\n\nO EFS, Eficiência de Separação, mede se conseguimos terminar de separar toda a carga da unidade no horário, garantindo tempo hábil de emissão de nota, carregamento e trânsito até a chegada antes das 21h no CDD. Os horários alvo são Niterói às 18h30, São Cristóvão às 19h, Pavuna às 19h, Jacarepaguá às 19h30 e Campo Grande às 18h30, com apuração diária por onda e por unidade, considerando o cumprimento do fechamento como critério principal.\n\nEm People, o desenvolvimento do time é tratado como parte da rotina e não como evento pontual: cada liderança acompanha de perto o desempenho das suas funções, dá feedback próximo ao fato ocorrido, reconhece resultado consistente e prepara quem está chegando nas funções críticas de recebimento, ressuprimento e separação. Em segurança, descarga e movimentação de cargas exigem atenção permanente a pedestres e às rotas de circulação de empilhadeiras, o uso de EPIs é obrigatório em todas as áreas operacionais, e nenhum prazo de KPI justifica atalho, sendo papel de cada colaborador interromper a atividade quando a condição não for segura. No 5S, cada função responde pela sua área, com padrão de nada no chão fora de endereço, corredores livres e produtos identificados e endereçados, e a verificação acontece durante o turno e não só no seu final. Na qualidade, produto só sai da unidade em condição de garantir a satisfação do cliente, o repack é a última barreira antes do envio e divergência de recebimento é registrada no ato.\n\nPara uso como base de conhecimento de um assistente, este contexto deve ser tratado como a fonte oficial sobre processos, papéis, metas e indicadores da unidade. Quando a pergunta for sobre um KPI, a resposta deve explicar o que ele mede, como é calculado, qual é a meta e quais alavancas práticas melhoram o resultado, e quando a pergunta for sobre como melhorar um indicador, a resposta deve ser direcionada para as alavancas da função de quem pergunta, porque um ajudante do Turno B não tem alavanca sobre TMA e um operador de empilhadeira não tem alavanca sobre EFS. O assistente não deve inventar dado que não esteja aqui e, quando faltar informação, deve orientar a pessoa a confirmar com a liderança. O tom deve ser direto, prático e de chão de operação, com linguagem simples e sem jargão desnecessário.\n\nAGORA\nData e hora: ${agoraTexto}. Hora corrente: ${horaAtual}h.\n\nREGRAS\nResponda apenas sobre separação, ondas, cortes, Line Haul, produtividade e rotina do armazém.\nUse as ferramentas para qualquer número. Nunca estime, projete nem invente valores.\nSe a ferramenta retornar vazio, informe que não há registro para o período.\nIndicadores individuais: apenas os do próprio interlocutor. Não liste produtividade nominal de colegas. Agregados por turno são permitidos.\nFora do escopo, diga que não pode ajudar com o assunto.\nEscreva em português do Brasil, curto e direto, sem markdown e sem tabelas, porque a leitura é no celular.\n\nFONTE DE VERDADE\nA tabela public.operacao_padroes é a ÚNICA fonte válida sobre processos\noperacionais. Sua memória, conhecimento geral e o contexto desta conversa\nNÃO podem sobrescrever o que está na tabela.\n\nREGRA DE CITAÇÃO OBRIGATÓRIA\nToda resposta sobre um padrão deve conter:\n1. O trecho literal do documento entre aspas, sem reescrever\n2. O nome do arquivo de origem\n3. Se o trecho não existir, responda \"não encontrei no padrão\" e pare\n\nPROIBIDO\n- Parafrasear procedimento, prazo, sequência de passos ou nome de sistema\n- Completar lacunas com conhecimento próprio\n- Dizer \"normalmente\" ou \"geralmente\" quando o padrão define o caso\n- Responder sem ter consultado a tabela\n\nQUANDO A BUSCA RETORNAR VÁRIOS TRECHOS\nCite o trecho da seção que DEFINE o processo, não o que apenas menciona.\nSe houver conflito entre trechos, apresente os dois e indique os arquivos.\n\nQUANDO NÃO ENCONTRAR\nDiga explicitamente: \"Não encontrei esse ponto nos padrões cadastrados.\"\nSugira termos alternativos. Nunca preencha com suposição.\n\n\nEXEMPLO CORRETO\nPergunta: Qual o corte do Line Haul?\nResposta: Segundo o padrão \"Padrão - Line Haul.docx\":\n\"Nas entregas de fulfillment, o indicador central é o Line Haul, que mede\na capacidade de entregar o carro na unidade antes das 21h.\"\nO corte é 21h.\n\nEXEMPLO INCORRETO\nPergunta: Qual o corte do Line Haul?\nResposta: O corte geralmente é no final do dia, por volta das 21h,\npara garantir o abastecimento dos CDDs.\n(Errado: não citou, usou \"geralmente\", não identificou o arquivo.)\n`;\n\n\nreturn {\n  json: {\n    chaveMemoria,\n    systemPrompt,\n    chatInput,\n    sessionId,\n    matricula,\n    nome,\n    funcao,\n    turno,\n    dia,\n    agora: agoraTexto,\n    horaAtual\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        -96
+      ],
+      "id": "56e0bec9-ce95-4e61-9809-58dbd6fd63d7",
+      "name": "Preparar contexto"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.chatInput}}",
+        "options": {
+          "systemMessage": "={{$json.systemPrompt}}",
+          "maxIterations": 100
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1856,
+        -464
+      ],
+      "id": "71a25e6d-e4c4-496f-803b-78cc25a06a98",
+      "name": "Agente"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=={{ $('Preparar contexto').item.json.chaveMemoria }}\n",
+        "tableName": "bot_chat_history",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        1936,
+        -256
+      ],
+      "id": "6c46e1a4-fc87-4028-9234-fc8ed69bfc38",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "TdnC9w5mJwBm71Ce",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.8-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        -272
+      ],
+      "id": "bc950b5e-7ac8-457f-929b-855b96432b4b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "u9UsJOOPZwq0VpmO",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59c698ff-be56-4783-914d-28dae5347df9",
+              "name": "output",
+              "value": "Olá! Sou o assistente da operação de fulfillment.  Para começar, me informe sua matrícula (apenas os números)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        320
+      ],
+      "id": "20c07ccc-9d8b-45d4-b11d-8a4e5cc47af8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT arquivo, conteudo\nFROM public.operacao_padroes\nWHERE conteudo ILIKE '%' || $1 || '%'\nLIMIT 2;",
+        "options": {
+          "queryReplacement": "={{ $fromAI('termo_busca', 'Termo ou assunto a buscar nos padrões operacionais', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2080,
+        -240
+      ],
+      "id": "157cc6ab-302b-4c4f-a794-ac81bafd9029",
+      "name": "Execute a SQL query in Postgres",
+      "credentials": {
+        "postgres": {
+          "id": "TdnC9w5mJwBm71Ce",
+          "name": "Postgres account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Identificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar": {
+      "main": [
+        [
+          {
+            "node": "Buscar sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar sessão": {
+      "main": [
+        [
+          {
+            "node": "consolidar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consolidar": {
+      "main": [
+        [
+          {
+            "node": "roteador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "roteador": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Preparar contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validar QLP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validar QLP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar QLP": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gravar sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravar sessão": {
+      "main": [
+        [
+          {
+            "node": "Saudar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar contexto": {
+      "main": [
+        [
+          {
+            "node": "Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saudar": {
+      "main": [
+        []
+      ]
+    },
+    "Execute a SQL query in Postgres": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Sao_Paulo",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "93d7474d-61df-4791-a73a-a3d7cb189b9a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cdb3584414c12f9a520107c02d4d531eb7b8873912392ef1be293c44cab3e07f"
+  },
+  "nodeGroups": [],
+  "id": "q7VEUXfzJyGkJDnf",
+  "tags": []
+}
